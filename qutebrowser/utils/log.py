@@ -363,6 +363,15 @@ def change_console_formatter(level: int) -> None:
         assert isinstance(old_formatter, JSONFormatter), old_formatter
 
 
+@contextlib.contextmanager
+def hide_qt_warning(pattern: str, logger: str = 'qt') -> Iterator[None]:
+    """Hide Qt warnings matching the given regex."""
+    from qutebrowser.utils import qtlog
+
+    with qtlog.hide_qt_warning(pattern, logger):
+        yield
+
+
 def init_from_config(conf: 'configmodule.ConfigContainer') -> None:
     """Initialize logging settings from the config.
 
