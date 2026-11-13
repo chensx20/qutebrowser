@@ -42,21 +42,30 @@ from qutebrowser.qt import sip
 
 @cmdutils.register(maxsplit=1, no_cmd_split=True, no_replace_variables=True)
 @cmdutils.argument('win_id', value=cmdutils.Value.win_id)
-def later(ms: int, command: str, win_id: int) -> None:
+def later(ms: str, command: str, win_id: int) -> None:
     """Execute a command after some time.
 
+    Durations use compact integer components with units h, m, s, or ms
+    (e.g. 5s, 2m30s, 1h). Components can be repeated or reordered and are
+    added together. One leading sign is allowed; fractions and whitespace
+    within durations are not supported.
+
     Args:
-        ms: How many milliseconds to wait.
+        ms: How long to wait, in milliseconds or as a duration.
         command: The command to run, with optional args.
     """
-    if ms < 0:
+    try:
+        milliseconds = utils.parse_duration(ms)
+    except ValueError as e:
+        raise cmdutils.CommandError(str(e))
+    if milliseconds < 0:
         raise cmdutils.CommandError("I can't run something in the past!")
     commandrunner = runners.CommandRunner(win_id)
     timer = usertypes.Timer(name='later', parent=QApplication.instance())
     try:
         timer.setSingleShot(True)
         try:
-            timer.setInterval(ms)
+            timer.setInterval(milliseconds)
         except OverflowError:
             raise cmdutils.CommandError("Numeric argument is too large for "
                                         "internal int representation.")

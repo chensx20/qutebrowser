@@ -245,6 +245,22 @@ def parse_version(version: str) -> VersionNumber:
     return cast(VersionNumber, v_q.normalized())
 
 
+def parse_duration(duration: str) -> int:
+    """Parse milliseconds or compact h/m/s/ms components into milliseconds."""
+    try:
+        return int(duration)
+    except ValueError:
+        pass
+
+    if re.fullmatch(r'[+-]?(?:[0-9]+(?:ms|[hms]))+', duration) is None:
+        raise ValueError("Invalid duration: {!r}".format(duration))
+
+    factors = {'h': 3600000, 'm': 60000, 's': 1000, 'ms': 1}
+    milliseconds = sum(int(value) * factors[unit] for value, unit in
+                       re.findall(r'([0-9]+)(ms|[hms])', duration))
+    return -milliseconds if duration.startswith('-') else milliseconds
+
+
 def format_seconds(total_seconds: int) -> str:
     """Format a count of seconds to get a [H:]M:SS string."""
     prefix = '-' if total_seconds < 0 else ''

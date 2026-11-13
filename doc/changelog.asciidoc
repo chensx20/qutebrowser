@@ -60,6 +60,8 @@ Removed
 Added
 ~~~~~
 
+- The `:later` command accepts compact durations such as `5s`, `2m30s`, and
+  `1h`, with `h`, `m`, `s`, and `ms` units. Bare integers remain milliseconds.
 - When QtWebEngine has been updated but PyQtWebEngine hasn't yet, the dark mode
   settings might stop working. As a (currently undocumented) escape hatch, this
   version adds a `QUTE_DARKMODE_VARIANT=qt_515_2` environment variable which can
