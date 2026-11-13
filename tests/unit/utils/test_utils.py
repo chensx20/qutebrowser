@@ -818,3 +818,36 @@ def test_libgl_workaround(monkeypatch, skip):
     if skip:
         monkeypatch.setenv('QUTE_SKIP_LIBGL_WORKAROUND', '1')
     utils.libgl_workaround()  # Just make sure it doesn't crash.
+
+
+@pytest.mark.parametrize('duration, expected', [
+    ('5s', 5000), ('2m30s', 150000), ('1h', 3600000), ('90', 90),
+    ('1h2m3s4ms', 3723004), ('1ms2s3m4h', 14582001),
+    ('1s2s', 3000), ('1m1ms1m', 120001), ('01s', 1000),
+    ('+2m30s', 150000), ('-2m30s', -150000),
+    ('0', 0), ('0ms', 0), ('-0s', 0), ('+0h0m0s0ms', 0),
+    ('2147483647ms', 2147483647), ('2147483648ms', 2147483648),
+    ('596h31m23s647ms', 2147483647), ('-2147483648ms', -2147483648),
+    ('9007199254740993ms', 9007199254740993),
+])
+def test_parse_duration(duration, expected):
+    assert utils.parse_duration(duration) == expected
+
+
+@pytest.mark.parametrize('duration', [
+    '90', '+90', '-90', '00090', ' 90 ', '\t-90\n', '1_000',
+    '\u0661\u0662', '2147483648', '9007199254740993',
+])
+def test_parse_duration_integer_compatibility(duration):
+    assert utils.parse_duration(duration) == int(duration)
+
+
+@pytest.mark.parametrize('duration', [
+    '', ' ', '+', '-', 's', 'ms', '1.5s', '1.5', '.5s', '1e3s',
+    '1S', '1d', '1sec', '1m30', '1s2', '1m 2s', ' 1s', '1s ',
+    '1s\n', '1\ts', '1s-2ms', '1s+2ms', '--1s', '+-1s', '++1s',
+    'abc1s', '1sabc', '1sms', '0x10', '1_000ms',
+])
+def test_parse_duration_invalid(duration):
+    with pytest.raises(ValueError, match='Invalid duration:'):
+        utils.parse_duration(duration)

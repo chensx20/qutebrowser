@@ -790,8 +790,10 @@ Syntax: +:later 'ms' 'command'+
 
 Execute a command after some time.
 
+Durations use compact integer components with units h, m, s, or ms (e.g. 5s, 2m30s, 1h). Components can be repeated or reordered and are added together. One leading sign is allowed; fractions and whitespace within durations are not supported.
+
 ==== positional arguments
-* +'ms'+: How many milliseconds to wait.
+* +'ms'+: How long to wait, in milliseconds or as a duration.
 * +'command'+: The command to run, with optional args.
 
 ==== note

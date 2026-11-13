@@ -29,6 +29,31 @@ Feature: Miscellaneous utility commands exposed to the user.
         When I run :later 36893488147419103232 scroll down
         Then the error "Numeric argument is too large for internal int representation." should be shown
 
+    Scenario: :later with milliseconds suffix
+        When I run :later 20ms message-info duration-ms
+        Then the message "duration-ms" should be shown
+
+    Scenario: :later with compound duration and deferred commands
+        When I run :later 0s20ms message-info "duration compound" ;; message-info duration-second
+        Then the message "duration compound" should be shown
+        And the message "duration-second" should be shown
+
+    Scenario: :later with signed duration
+        When I run :later +20ms message-info duration-signed
+        Then the message "duration-signed" should be shown
+
+    Scenario: :later with negative duration
+        When I run :later -- -1s reload
+        Then the error "I can't run something in the past!" should be shown
+
+    Scenario: :later with malformed duration
+        When I run :later 1.5s scroll down
+        Then the error "Invalid duration: '1.5s'" should be shown
+
+    Scenario: :later with duration overflow
+        When I run :later 2147483648ms scroll down
+        Then the error "Numeric argument is too large for internal int representation." should be shown
+
     ## :repeat
 
     Scenario: :repeat simple
