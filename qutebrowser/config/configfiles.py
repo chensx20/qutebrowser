@@ -51,6 +51,29 @@ state = cast('StateConfig', None)
 _SettingsType = Dict[str, Dict[str, Any]]
 
 
+def _version_change(old_version: Optional[str],
+                    new_version: str) -> Optional[str]:
+    """Return the release level changed between two version strings."""
+    if old_version is None:
+        return None
+
+    old = utils.parse_version(old_version)
+    new = utils.parse_version(new_version)
+    if old == new:
+        return None
+
+    old_segments = tuple(old.segmentAt(i) for i in range(old.segmentCount()))
+    new_segments = tuple(new.segmentAt(i) for i in range(new.segmentCount()))
+    old_padded = old_segments + (0,) * (3 - len(old_segments))
+    new_padded = new_segments + (0,) * (3 - len(new_segments))
+
+    if old_padded[0] != new_padded[0]:
+        return 'major'
+    if old_padded[1] != new_padded[1]:
+        return 'minor'
+    return 'patch'
+
+
 class StateConfig(configparser.ConfigParser):
 
     """The "state" file saving various application state."""
@@ -68,10 +91,13 @@ class StateConfig(configparser.ConfigParser):
             old_qt_version = self['general'].get('qt_version', None)
             old_qutebrowser_version = self['general'].get('version', None)
             self.qt_version_changed = old_qt_version != qt_version
+            self.qutebrowser_version_change = _version_change(
+                old_qutebrowser_version, qutebrowser.__version__)
             self.qutebrowser_version_changed = (
-                old_qutebrowser_version != qutebrowser.__version__)
+                self.qutebrowser_version_change is not None)
         else:
             self.qt_version_changed = False
+            self.qutebrowser_version_change = None
             self.qutebrowser_version_changed = False
 
         for sect in ['general', 'geometry', 'inspector']:
@@ -329,6 +355,7 @@ class YamlMigrations(QObject):
         self._migrate_bool('scrolling.bar', 'always', 'overlay')
         self._migrate_bool('qt.force_software_rendering',
                            'software-opengl', 'none')
+        self._migrate_bool('changelog_after_upgrade', 'patch', 'never')
         self._migrate_renamed_bool(
             old_name='content.webrtc_public_interfaces_only',
             new_name='content.webrtc_ip_handling_policy',

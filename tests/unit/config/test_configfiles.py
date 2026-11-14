@@ -166,15 +166,17 @@ def test_qt_version_changed(data_tmpdir, monkeypatch,
     assert state.qt_version_changed == changed
 
 
-@pytest.mark.parametrize('old_version, new_version, changed', [
-    (None, '2.0.0', False),
-    ('1.14.1', '1.14.1', False),
-    ('1.14.0', '1.14.1', True),
-    ('1.14.1', '2.0.0', True),
+@pytest.mark.parametrize('old_version, new_version, change', [
+    (None, '2.0.0', None),
+    ('1.14.1', '1.14.1', None),
+    ('2.0.0', '2.0.1', 'patch'),
+    ('2.0', '2.1.0', 'minor'),
+    ('1.14.1', '2.0.0', 'major'),
+    ('2.0.0', '2.0.0.1', 'patch'),
 ])
 def test_qutebrowser_version_changed(
-        data_tmpdir, monkeypatch, old_version, new_version, changed):
-    monkeypatch.setattr(configfiles.qutebrowser, '__version__', lambda: new_version)
+        data_tmpdir, monkeypatch, old_version, new_version, change):
+    monkeypatch.setattr(configfiles.qutebrowser, '__version__', new_version)
 
     statefile = data_tmpdir / 'state'
     if old_version is not None:
@@ -185,7 +187,8 @@ def test_qutebrowser_version_changed(
         statefile.write_text(data, 'utf-8')
 
     state = configfiles.StateConfig()
-    assert state.qutebrowser_version_changed == changed
+    assert state.qutebrowser_version_change == change
+    assert state.qutebrowser_version_changed == (change is not None)
 
 
 @pytest.fixture
@@ -549,6 +552,8 @@ class TestYamlMigrations:
         ('qt.force_software_rendering', True, 'software-opengl'),
         ('qt.force_software_rendering', False, 'none'),
         ('qt.force_software_rendering', 'chromium', 'chromium'),
+        ('changelog_after_upgrade', True, 'patch'),
+        ('changelog_after_upgrade', False, 'never'),
     ])
     def test_bool(self, migration_test, setting, old, new):
         migration_test(setting, old, new)

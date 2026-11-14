@@ -384,10 +384,15 @@ def _open_special_pages(args):
             general_sect[state] = '1'
 
     # Show changelog on new releases
-    if not configfiles.state.qutebrowser_version_changed:
+    version_change = configfiles.state.qutebrowser_version_change
+    if version_change is None:
         return
-    if not config.val.changelog_after_upgrade:
+    changelog_threshold = config.val.changelog_after_upgrade
+    if changelog_threshold == 'never':
         log.init.debug("Showing changelog is disabled")
+        return
+    change_levels = {'patch': 1, 'minor': 2, 'major': 3}
+    if change_levels[version_change] < change_levels[changelog_threshold]:
         return
 
     try:
