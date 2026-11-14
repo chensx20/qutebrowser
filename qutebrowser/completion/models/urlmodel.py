@@ -24,7 +24,7 @@ from typing import Dict, Sequence
 from PyQt5.QtCore import QAbstractItemModel
 
 from qutebrowser.completion.models import (completionmodel, listcategory,
-                                           histcategory)
+                                           histcategory, filepathcategory)
 from qutebrowser.browser import history
 from qutebrowser.utils import log, objreg
 from qutebrowser.config import config
@@ -75,6 +75,9 @@ def url(*, info):
                      if k != 'DEFAULT']
     categories = config.val.completion.open_categories
     models: Dict[str, QAbstractItemModel] = {}
+
+    if 'filesystem' in categories:
+        models['filesystem'] = filepathcategory.Filesystem()
 
     if searchengines and 'searchengines' in categories:
         models['searchengines'] = listcategory.ListCategory(

@@ -20,6 +20,7 @@
 """Tests for completion models."""
 
 import collections
+import os
 import random
 import string
 import time
@@ -29,7 +30,7 @@ from unittest import mock
 import hypothesis
 import hypothesis.strategies
 import pytest
-from PyQt5.QtCore import QUrl, QDateTime
+from PyQt5.QtCore import QUrl, QDateTime, QModelIndex, Qt
 try:
     from PyQt5.QtWebEngineWidgets import (
         QWebEngineHistory, QWebEngineHistoryItem
@@ -40,7 +41,7 @@ except ImportError:
 from qutebrowser.misc import objects
 from qutebrowser.completion import completer
 from qutebrowser.completion.models import (
-    miscmodels, urlmodel, configmodel, listcategory)
+    miscmodels, urlmodel, configmodel, listcategory, filepathcategory)
 from qutebrowser.config import configdata, configtypes
 from qutebrowser.utils import usertypes
 from qutebrowser.mainwindow import tabbedbrowser
@@ -566,6 +567,7 @@ def test_url_completion_no_quickmarks(qtmodeltester, web_history_populated,
             ('https://python.org', 'Welcome to Python.org', '2016-03-08'),
             ('http://qutebrowser.org', 'qutebrowser', '2015-09-05'),
         ],
+        "Filesystem": [],
     })
 
 
@@ -587,7 +589,85 @@ def test_url_completion_no_bookmarks(qtmodeltester, web_history_populated,
             ('https://python.org', 'Welcome to Python.org', '2016-03-08'),
             ('http://qutebrowser.org', 'qutebrowser', '2015-09-05'),
         ],
+        "Filesystem": [],
     })
+
+
+def test_filesystem_favorites(config_stub, qtmodeltester):
+    config_stub.val.completion.favorite_paths = ['/z', '~/a', '/z']
+    model = filepathcategory.Filesystem()
+    model.set_pattern('')
+    qtmodeltester.check(model)
+    assert [model.data(model.index(i, 0)) for i in range(model.rowCount())] == [
+        '/z', '~/a', '/z']
+    assert model.data(QModelIndex()) is None
+    assert model.data(model.index(0, 0), Qt.ToolTipRole) is None
+    assert model.rowCount(model.index(0, 0)) == 0
+    config_stub.val.completion.favorite_paths = None
+    model.set_pattern('')
+    assert model.rowCount() == 0
+
+
+def test_filesystem_paths(config_stub, qtmodeltester, tmp_path, monkeypatch):
+    (tmp_path / 'a[1] one').touch()
+    (tmp_path / 'a[1] two').mkdir()
+    (tmp_path / 'a1 other').touch()
+    monkeypatch.setenv('HOME', str(tmp_path))
+    model = filepathcategory.Filesystem()
+
+    def check(pattern, expected):
+        model.set_pattern(pattern)
+        qtmodeltester.check(model)
+        assert [model.data(model.index(i, 0))
+                for i in range(model.rowCount())] == expected
+
+    check(str(tmp_path / 'a[1]'), [str(tmp_path / 'a[1] one'),
+                                   str(tmp_path / 'a[1] two')])
+    check('~/a[1]', ['~/a[1] one', '~/a[1] two'])
+    url = QUrl.fromLocalFile(str(tmp_path / 'a[1]')).toString()
+    check(url, [QUrl.fromLocalFile(str(tmp_path / name)).toString()
+                for name in ['a[1] one', 'a[1] two']])
+    check('relative', [])
+    check('https://example.com/', [])
+    check(str(tmp_path / 'missing'), [])
+    check(str(tmp_path) + '\0', [])
+
+
+def test_filesystem_other_home(config_stub, tmp_path, monkeypatch):
+    (tmp_path / 'file').touch()
+    real_expanduser = os.path.expanduser
+    monkeypatch.setattr(os.path, 'expanduser',
+                        lambda path: str(tmp_path) if path == '~other'
+                        else real_expanduser(path))
+    model = filepathcategory.Filesystem()
+    model.set_pattern('~other/fi')
+    assert model.data(model.index(0, 0)) == '~other/file'
+
+
+@pytest.mark.parametrize('error', [OSError, UnicodeError, ValueError])
+def test_filesystem_bad_expansion(config_stub, monkeypatch, error):
+    def fail(path):
+        raise error(path)
+
+    monkeypatch.setattr(os.path, 'expanduser', fail)
+    model = filepathcategory.Filesystem()
+    model.set_pattern('~bad/file')
+    assert model.rowCount() == 0
+
+
+def test_filesystem_category_order(config_stub, qtmodeltester, quickmarks,
+                                   bookmark_manager_stub, info):
+    config_stub.val.completion.open_categories = ['filesystem', 'quickmarks']
+    config_stub.val.completion.favorite_paths = ['/favorite']
+    model = urlmodel.url(info=info)
+    model.set_pattern('')
+    qtmodeltester.check(model)
+    assert [model.data(model.index(i, 0)) for i in range(model.rowCount())] == [
+        'Filesystem', 'Quickmarks']
+    assert model.data(model.index(0, 0, model.index(0, 0))) == '/favorite'
+    model.set_pattern('wiki')
+    assert model.rowCount(model.index(0, 0)) == 0
+    assert model.rowCount(model.index(1, 0)) == 2
 
 
 @pytest.mark.parametrize('url, title, pattern, rowcount', [
