@@ -1138,16 +1138,25 @@ downloads.location.suggestion:
       - both: Show download path and filename.
   desc: What to display in the download filename input.
 
+completion.favorite_paths:
+  type:
+    name: List
+    valtype: String
+    none_ok: true
+  default: []
+  desc: Favorite paths to show in the :open completion when no argument is given.
+
 completion.open_categories:
   type:
     name: FlagList
-    valid_values: [searchengines, quickmarks, bookmarks, history]
+    valid_values: [searchengines, quickmarks, bookmarks, history, filesystem]
     none_ok: true
   default:
     - searchengines
     - quickmarks
     - bookmarks
     - history
+    - filesystem
   desc: Which categories to show (in which order) in the :open completion.
 
 downloads.open_dispatcher:
