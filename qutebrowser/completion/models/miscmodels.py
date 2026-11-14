@@ -165,7 +165,7 @@ def _buffer(*, win_id_filter=lambda _win_id: True, add_win_id=True):
 def buffer(*, info=None):
     """A model to complete on open tabs across all windows.
 
-    Used for switching the buffer command.
+    Used for switching tabs with the tab-select command.
     """
     utils.unused(info)
     return _buffer()
