@@ -355,6 +355,7 @@ class YamlMigrations(QObject):
         self._migrate_bool('scrolling.bar', 'always', 'overlay')
         self._migrate_bool('qt.force_software_rendering',
                            'software-opengl', 'none')
+        self._migrate_bool('changelog_after_upgrade', 'patch', 'never')
         self._migrate_renamed_bool(
             old_name='content.webrtc_public_interfaces_only',
             new_name='content.webrtc_ip_handling_policy',
